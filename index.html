@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -317,10 +316,24 @@
     </div>
     <div class="error-box" id="error-box"></div>
   </div>
+
+  <div class="chart-card" style="margin-top:0;">
+    <div class="chart-header">
+      <div class="chart-title">月別 応募数 &amp; 一次面談実施率</div>
+    </div>
+    <div class="chart-wrap" style="height:300px;">
+      <div class="loading" id="monthly-loading">
+        <div class="spinner"></div>
+        <span>データ取得中...</span>
+      </div>
+      <canvas id="monthlyChart" style="display:none;"></canvas>
+    </div>
+  </div>
 </div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
+const INTERVIEW_DONE_STATUSES = ['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
 const DATE_FIELD = '応募日';
 const STATUS_FIELD = 'ステータス';
 
@@ -347,15 +360,24 @@ function getDateValue(page) {
   return page.created_time || null;
 }
 
-function hasStatus(page) {
+function getStatusString(page) {
   const props = page.properties;
   const f = props[STATUS_FIELD];
-  if (!f) return true;
-  if (f.type === 'select') return !!f.select;
-  if (f.type === 'status') return !!f.status;
-  if (f.type === 'rich_text') return f.rich_text?.length > 0;
-  if (f.type === 'multi_select') return f.multi_select?.length > 0;
-  return true;
+  if (!f) return null;
+  if (f.type === 'select' && f.select) return f.select.name;
+  if (f.type === 'status' && f.status) return f.status.name;
+  if (f.type === 'rich_text' && f.rich_text?.[0]) return f.rich_text[0].plain_text;
+  if (f.type === 'multi_select' && f.multi_select?.[0]) return f.multi_select[0].name;
+  return null;
+}
+
+function hasStatus(page) {
+  return getStatusString(page) !== null;
+}
+
+function isInterviewDone(page) {
+  const s = getStatusString(page);
+  return s && INTERVIEW_DONE_STATUSES.includes(s);
 }
 
 function renderStats(pages) {
@@ -483,6 +505,119 @@ function renderChart(pages, mode) {
   });
 }
 
+function renderMonthlyCombo(pages) {
+  document.getElementById('monthly-loading').style.display = 'none';
+  document.getElementById('monthlyChart').style.display = 'block';
+
+  const filtered = pages.filter(hasStatus);
+  const monthData = {}; // { 'YYYY-MM': { total: N, interview: N } }
+
+  filtered.forEach(p => {
+    const d = getDateValue(p);
+    if (!d) return;
+    const key = d.slice(0, 7);
+    if (!monthData[key]) monthData[key] = { total: 0, interview: 0 };
+    monthData[key].total++;
+    if (isInterviewDone(p)) monthData[key].interview++;
+  });
+
+  const keys = Object.keys(monthData).sort();
+  const labels = keys.map(k => {
+    const [y, m] = k.split('-');
+    return `${y}/${parseInt(m)}`;
+  });
+  const totals = keys.map(k => monthData[k].total);
+  const rates = keys.map(k => {
+    const { total, interview } = monthData[k];
+    return total > 0 ? Math.round((interview / total) * 1000) / 10 : 0;
+  });
+
+  const ctx2 = document.getElementById('monthlyChart').getContext('2d');
+  if (window.monthlyChart) window.monthlyChart.destroy();
+
+  window.monthlyChart = new Chart(ctx2, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: '応募数',
+          data: totals,
+          backgroundColor: 'rgba(200, 82, 42, 0.25)',
+          borderColor: 'rgba(200, 82, 42, 0.6)',
+          borderWidth: 1.5,
+          borderRadius: 6,
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: '一次面談実施率',
+          data: rates,
+          borderColor: 'rgba(34, 139, 90, 0.9)',
+          backgroundColor: 'rgba(34, 139, 90, 0.1)',
+          borderWidth: 2.5,
+          pointBackgroundColor: 'rgba(34, 139, 90, 0.9)',
+          pointRadius: 5,
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y2',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: '#7a7167', font: { size: 11, family: 'DM Mono' }, boxWidth: 12 }
+        },
+        tooltip: {
+          backgroundColor: '#1a1714',
+          titleColor: '#f7f5f0',
+          bodyColor: '#a09890',
+          padding: 10,
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.label === '一次面談実施率') return `  一次面談実施率: ${ctx.parsed.y}%`;
+              return `  応募数: ${ctx.parsed.y} 件`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: '#a09890', font: { size: 11, family: 'DM Mono' }, maxRotation: 0 }
+        },
+        y: {
+          position: 'left',
+          grid: { color: 'rgba(226,221,212,0.6)' },
+          border: { display: false },
+          ticks: { color: '#a09890', font: { size: 11, family: 'DM Mono' }, stepSize: 1 },
+          beginAtZero: true,
+          title: { display: true, text: '応募数（件）', color: '#a09890', font: { size: 10 } }
+        },
+        y2: {
+          position: 'right',
+          grid: { display: false },
+          border: { display: false },
+          min: 0,
+          max: 100,
+          ticks: {
+            color: '#2a6b4a',
+            font: { size: 11, family: 'DM Mono' },
+            callback: v => v + '%'
+          },
+          title: { display: true, text: '一次面談実施率', color: '#2a6b4a', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
 async function loadData() {
   document.getElementById('chart-loading').style.display = 'flex';
   document.getElementById('myChart').style.display = 'none';
@@ -494,6 +629,7 @@ async function loadData() {
     allData = pages;
     renderStats(pages);
     renderChart(pages, currentTab);
+    renderMonthlyCombo(pages);
     const now = new Date();
     document.getElementById('last-updated').textContent =
       `更新：${now.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
