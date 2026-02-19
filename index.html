@@ -533,9 +533,9 @@ function renderMonthlyCombo(pages) {
   });
 
   const ctx2 = document.getElementById('monthlyChart').getContext('2d');
-  if (window.monthlyChart) window.monthlyChart.destroy();
+  if (window.monthlyChartInstance && typeof window.monthlyChartInstance.destroy === 'function') { window.monthlyChartInstance.destroy(); }
 
-  window.monthlyChart = new Chart(ctx2, {
+  window.monthlyChartInstance = new Chart(ctx2, {
     data: {
       labels,
       datasets: [
