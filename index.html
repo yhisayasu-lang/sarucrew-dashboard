@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>新卒応募ダッシュボード | SARUCREW</title>
+<title>採用ダッシュボード | SARUCREW</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
-  :root{--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#e2ddd4;--accent:#c8522a;--accent-ob:#4f7ef7;--text:#1a1714;--text-muted:#7a7167;--text-dim:#a09890;}
+  :root{--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#e2ddd4;--accent:#c8522a;--accent-ob:#4f7ef7;--accent-chuto:#7c3aed;--text:#1a1714;--text-muted:#7a7167;--text-dim:#a09890;}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
   body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.5;}
@@ -22,26 +22,32 @@
   .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
   .btn-ghost:hover{color:var(--text);border-color:var(--text-dim);}
 
-  /* メインタブ */
-  .main-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:32px;width:fit-content;}
-  .main-tab{padding:10px 28px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all 0.2s;color:var(--text-muted);background:transparent;}
-  .main-tab.active-all{background:var(--accent);color:white;box-shadow:0 2px 8px rgba(200,82,42,0.3);}
-  .main-tab.active-ob{background:var(--accent-ob);color:white;box-shadow:0 2px 8px rgba(79,126,247,0.3);}
+  /* 採用区分タブ（新卒/中途） */
+  .hire-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:12px;padding:4px;margin-bottom:32px;width:fit-content;}
+  .hire-tab{padding:10px 32px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all 0.2s;color:var(--text-muted);background:transparent;}
+  .hire-tab.active-shinso{background:var(--accent);color:white;box-shadow:0 2px 8px rgba(200,82,42,0.3);}
+  .hire-tab.active-chuto{background:var(--accent-chuto);color:white;box-shadow:0 2px 8px rgba(124,58,237,0.3);}
+
+  /* 媒体タブ（全媒体/OfferBox） */
+  .media-tabs{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:24px;width:fit-content;}
+  .media-tab{padding:8px 24px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all 0.2s;color:var(--text-muted);background:transparent;}
+  .media-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.1);}
 
   .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 28px 24px;animation:fadeUp 0.4s ease both;}
   .stat-card:nth-child(1){animation-delay:0.03s;}.stat-card:nth-child(2){animation-delay:0.07s;}.stat-card:nth-child(3){animation-delay:0.11s;}
-  .stat-card.featured{background:var(--accent);border-color:var(--accent);}
+  .stat-card.featured-shinso{background:var(--accent);border-color:var(--accent);}
   .stat-card.featured-ob{background:var(--accent-ob);border-color:var(--accent-ob);}
+  .stat-card.featured-chuto{background:var(--accent-chuto);border-color:var(--accent-chuto);}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
   .stat-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;}
-  .stat-card.featured .stat-label,.stat-card.featured-ob .stat-label{color:rgba(255,255,255,0.7);}
+  .stat-card.featured-shinso .stat-label,.stat-card.featured-ob .stat-label,.stat-card.featured-chuto .stat-label{color:rgba(255,255,255,0.7);}
   .stat-value{font-size:52px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;color:var(--text);letter-spacing:-0.03em;}
-  .stat-card.featured .stat-value,.stat-card.featured-ob .stat-value{color:white;}
+  .stat-card.featured-shinso .stat-value,.stat-card.featured-ob .stat-value,.stat-card.featured-chuto .stat-value{color:white;}
   .stat-unit{font-size:18px;font-weight:400;color:var(--text-muted);margin-left:4px;}
-  .stat-card.featured .stat-unit,.stat-card.featured-ob .stat-unit{color:rgba(255,255,255,0.6);}
+  .stat-card.featured-shinso .stat-unit,.stat-card.featured-ob .stat-unit,.stat-card.featured-chuto .stat-unit{color:rgba(255,255,255,0.6);}
   .stat-sub{font-size:11px;color:var(--text-dim);margin-top:10px;font-family:'DM Mono',monospace;}
-  .stat-card.featured .stat-sub,.stat-card.featured-ob .stat-sub{color:rgba(255,255,255,0.5);}
+  .stat-card.featured-shinso .stat-sub,.stat-card.featured-ob .stat-sub,.stat-card.featured-chuto .stat-sub{color:rgba(255,255,255,0.5);}
 
   .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:16px;animation:fadeUp 0.4s ease 0.15s both;}
   .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
@@ -52,129 +58,223 @@
   .chart-wrap{height:260px;position:relative;}.chart-wrap.tall{height:300px;}
   .loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:13px;gap:10px;flex-direction:column;}
   .spinner{width:28px;height:28px;border:2px solid var(--border);border-radius:50%;animation:spin 0.8s linear infinite;}
-  .spinner.all{border-top-color:var(--accent);}.spinner.ob{border-top-color:var(--accent-ob);}
+  .spinner.shinso{border-top-color:var(--accent);}.spinner.ob{border-top-color:var(--accent-ob);}.spinner.chuto{border-top-color:var(--accent-chuto);}
   @keyframes spin{to{transform:rotate(360deg);}}
   .error-box{background:#fef2f0;border:1px solid #fcc;border-radius:10px;padding:16px 20px;font-size:13px;color:#c0392b;margin-top:12px;display:none;line-height:1.6;}
-
   .section{display:none;}.section.active{display:block;}
+  .media-section{display:none;}.media-section.active{display:block;}
 
-  @media(max-width:640px){.stats-row{grid-template-columns:1fr;}.container{padding:24px 16px;}header{flex-direction:column;align-items:flex-start;gap:16px;}.stat-value{font-size:40px;}.main-tab{padding:10px 18px;font-size:13px;}}
+  @media(max-width:640px){.stats-row{grid-template-columns:1fr;}.container{padding:24px 16px;}header{flex-direction:column;align-items:flex-start;gap:16px;}.stat-value{font-size:40px;}.hire-tab{padding:10px 20px;font-size:13px;}}
 </style>
 </head>
 <body>
 <div class="container">
   <header>
     <div class="header-left">
-      <h1>新卒<em>応募</em>ダッシュボード</h1>
+      <h1>採用<em>ダッシュボード</em></h1>
       <p>SARUCREW · Notion DB連携</p>
     </div>
     <div class="header-right">
       <span class="last-updated" id="last-updated">読み込み中...</span>
-      <button class="btn btn-ghost" onclick="loadData()">↻ 更新</button>
+      <button class="btn btn-ghost" onclick="loadAll()">↻ 更新</button>
     </div>
   </header>
 
-  <!-- メインタブ -->
-  <div class="main-tabs">
-    <button class="main-tab active-all" onclick="switchMain('all',this)">全媒体</button>
-    <button class="main-tab" onclick="switchMain('ob',this)">OfferBox</button>
+  <!-- 新卒/中途タブ -->
+  <div class="hire-tabs">
+    <button class="hire-tab active-shinso" onclick="switchHire('shinso',this)">新卒</button>
+    <button class="hire-tab" onclick="switchHire('chuto',this)">中途</button>
   </div>
 
-  <!-- 全媒体セクション -->
-  <div class="section active" id="section-all">
-    <div class="stats-row">
-      <div class="stat-card featured">
-        <div class="stat-label">昨日の応募</div>
-        <div class="stat-value" id="all-yest">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub" id="all-yest-date">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">今月の応募</div>
-        <div class="stat-value" id="all-month">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub" id="all-month-label">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">累計応募</div>
-        <div class="stat-value" id="all-total">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub">全期間合計</div>
-      </div>
+  <!-- 新卒セクション -->
+  <div class="section active" id="section-shinso">
+    <div class="media-tabs">
+      <button class="media-tab active" onclick="switchMedia('shinso','all',this)">全媒体</button>
+      <button class="media-tab" onclick="switchMedia('shinso','ob',this)">OfferBox</button>
     </div>
-    <div class="chart-card">
-      <div class="chart-header">
-        <div class="chart-title">応募数推移</div>
-        <div class="sub-tabs">
-          <button class="sub-tab active" onclick="switchSub('daily',this)">日別（30日）</button>
-          <button class="sub-tab" onclick="switchSub('monthly',this)">月別</button>
+
+    <!-- 新卒・全媒体 -->
+    <div class="media-section active" id="shinso-all">
+      <div class="stats-row">
+        <div class="stat-card featured-shinso">
+          <div class="stat-label">昨日の応募</div>
+          <div class="stat-value" id="sa-yest">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="sa-yest-date">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今月の応募</div>
+          <div class="stat-value" id="sa-month">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="sa-month-label">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累計応募</div>
+          <div class="stat-value" id="sa-total">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub">全期間合計</div>
         </div>
       </div>
-      <div class="chart-wrap">
-        <div class="loading" id="all-bar-loading"><div class="spinner all"></div><span>データ取得中...</span></div>
-        <canvas id="allBarChart" style="display:none;"></canvas>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">応募数推移</div>
+          <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSub('shinso',this,'daily')">日別（30日）</button>
+            <button class="sub-tab" onclick="switchSub('shinso',this,'monthly')">月別</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="loading" id="sa-bar-loading"><div class="spinner shinso"></div><span>データ取得中...</span></div>
+          <canvas id="saBarChart" style="display:none;"></canvas>
+        </div>
+        <div class="error-box" id="error-box"></div>
       </div>
-      <div class="error-box" id="error-box"></div>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">月別 応募数 &amp; 一次面談実施率</div></div>
+        <div class="chart-wrap tall">
+          <div class="loading" id="sa-combo-loading"><div class="spinner shinso"></div><span>データ取得中...</span></div>
+          <canvas id="saComboChart" style="display:none;"></canvas>
+        </div>
+      </div>
     </div>
-    <div class="chart-card">
-      <div class="chart-header"><div class="chart-title">月別 応募数 &amp; 一次面談実施率</div></div>
-      <div class="chart-wrap tall">
-        <div class="loading" id="all-combo-loading"><div class="spinner all"></div><span>データ取得中...</span></div>
-        <canvas id="allComboChart" style="display:none;"></canvas>
+
+    <!-- 新卒・OfferBox -->
+    <div class="media-section" id="shinso-ob">
+      <div class="stats-row">
+        <div class="stat-card featured-ob">
+          <div class="stat-label">昨日の応募</div>
+          <div class="stat-value" id="so-yest">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="so-yest-date">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今月の応募</div>
+          <div class="stat-value" id="so-month">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="so-month-label">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累計応募</div>
+          <div class="stat-value" id="so-total">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub">全期間合計</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">OfferBox 日別応募数（過去30日）</div></div>
+        <div class="chart-wrap">
+          <div class="loading" id="so-bar-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
+          <canvas id="soBarChart" style="display:none;"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">OfferBox 月別 応募数 &amp; 一次面談実施率</div></div>
+        <div class="chart-wrap tall">
+          <div class="loading" id="so-combo-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
+          <canvas id="soComboChart" style="display:none;"></canvas>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- OfferBoxセクション -->
-  <div class="section" id="section-ob">
-    <div class="stats-row">
-      <div class="stat-card featured-ob">
-        <div class="stat-label">昨日の応募</div>
-        <div class="stat-value" id="ob-yest">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub" id="ob-yest-date">—</div>
+  <!-- 中途セクション -->
+  <div class="section" id="section-chuto">
+    <div class="media-tabs">
+      <button class="media-tab active" onclick="switchMedia('chuto','all',this)">全媒体</button>
+      <button class="media-tab" onclick="switchMedia('chuto','ob',this)">OfferBox</button>
+    </div>
+
+    <!-- 中途・全媒体 -->
+    <div class="media-section active" id="chuto-all">
+      <div class="stats-row">
+        <div class="stat-card featured-chuto">
+          <div class="stat-label">昨日の応募</div>
+          <div class="stat-value" id="ca-yest">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="ca-yest-date">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今月の応募</div>
+          <div class="stat-value" id="ca-month">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="ca-month-label">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累計応募</div>
+          <div class="stat-value" id="ca-total">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub">全期間合計</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">今月の応募</div>
-        <div class="stat-value" id="ob-month">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub" id="ob-month-label">—</div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">応募数推移</div>
+          <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSub('chuto',this,'daily')">日別（30日）</button>
+            <button class="sub-tab" onclick="switchSub('chuto',this,'monthly')">月別</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="loading" id="ca-bar-loading"><div class="spinner chuto"></div><span>データ取得中...</span></div>
+          <canvas id="caBarChart" style="display:none;"></canvas>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">累計応募</div>
-        <div class="stat-value" id="ob-total">—<span class="stat-unit">件</span></div>
-        <div class="stat-sub">全期間合計</div>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">月別 応募数 &amp; 一次面談実施率</div></div>
+        <div class="chart-wrap tall">
+          <div class="loading" id="ca-combo-loading"><div class="spinner chuto"></div><span>データ取得中...</span></div>
+          <canvas id="caComboChart" style="display:none;"></canvas>
+        </div>
       </div>
     </div>
-    <div class="chart-card">
-      <div class="chart-header"><div class="chart-title">OfferBox 日別応募数（過去30日）</div></div>
-      <div class="chart-wrap">
-        <div class="loading" id="ob-bar-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
-        <canvas id="obBarChart" style="display:none;"></canvas>
+
+    <!-- 中途・OfferBox -->
+    <div class="media-section" id="chuto-ob">
+      <div class="stats-row">
+        <div class="stat-card featured-ob">
+          <div class="stat-label">昨日の応募</div>
+          <div class="stat-value" id="co-yest">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="co-yest-date">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今月の応募</div>
+          <div class="stat-value" id="co-month">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub" id="co-month-label">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累計応募</div>
+          <div class="stat-value" id="co-total">—<span class="stat-unit">件</span></div>
+          <div class="stat-sub">全期間合計</div>
+        </div>
       </div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-header"><div class="chart-title">OfferBox 月別 応募数 &amp; 一次面談実施率</div></div>
-      <div class="chart-wrap tall">
-        <div class="loading" id="ob-combo-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
-        <canvas id="obComboChart" style="display:none;"></canvas>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">OfferBox 日別応募数（過去30日）</div></div>
+        <div class="chart-wrap">
+          <div class="loading" id="co-bar-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
+          <canvas id="coBarChart" style="display:none;"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header"><div class="chart-title">OfferBox 月別 応募数 &amp; 一次面談実施率</div></div>
+        <div class="chart-wrap tall">
+          <div class="loading" id="co-combo-loading"><div class="spinner ob"></div><span>データ取得中...</span></div>
+          <canvas id="coComboChart" style="display:none;"></canvas>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
+const GAS='https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
 const INTERVIEW_DONE=['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
-const DATE_FIELD='応募日',STATUS_FIELD='ステータス',MEDIA_FIELD='媒体',OB_VALUE='offer box';
-let charts={allBar:null,allCombo:null,obBar:null,obCombo:null};
-let allData=[],currentSub='daily',currentMain='all';
+const DATE_F='応募日',STATUS_F='ステータス',MEDIA_F='媒体',OB_VAL='offer box';
+let data={shinso:[],chuto:[]};
+let subMode={shinso:'daily',chuto:'daily'};
+let charts={};
+let currentHire='shinso';
 
-async function fetchAllPages(){
-  const res=await fetch(GAS_URL);
-  if(!res.ok)throw new Error('取得エラー: '+res.status);
-  const data=await res.json();
-  if(!Array.isArray(data))throw new Error('データ形式が正しくありません');
-  return data;
+async function fetchPages(type){
+  const res=await fetch(GAS+'?type='+type);
+  if(!res.ok)throw new Error('取得エラー('+type+'): '+res.status);
+  const d=await res.json();
+  if(!Array.isArray(d))throw new Error('データ形式エラー');
+  return d;
 }
 
 function getDate(p){
-  const f=p.properties[DATE_FIELD];
+  const f=p.properties[DATE_F];
   if(f){if(f.type==='date'&&f.date)return f.date.start;if(f.type==='rich_text'&&f.rich_text?.[0])return f.rich_text[0].plain_text;if(f.type==='created_time')return f.created_time;}
   return p.created_time||null;
 }
@@ -186,17 +286,17 @@ function getField(p,fn){
   if(f.type==='rich_text'&&f.rich_text?.[0])return f.rich_text[0].plain_text;
   return null;
 }
-function hasStatus(p){return getField(p,STATUS_FIELD)!==null;}
-function isOB(p){const m=getField(p,MEDIA_FIELD);return m&&m.toLowerCase()===OB_VALUE;}
-function isInterviewDone(p){const s=getField(p,STATUS_FIELD);return s&&INTERVIEW_DONE.includes(s);}
+function hasStatus(p){return getField(p,STATUS_F)!==null;}
+function isOB(p){const m=getField(p,MEDIA_F);return m&&m.toLowerCase()===OB_VAL;}
+function isInterviewDone(p){const s=getField(p,STATUS_F);return s&&INTERVIEW_DONE.includes(s);}
 
 function getDates(){
   const now=new Date(),today=now.toISOString().slice(0,10),mp=today.slice(0,7);
   const yd=new Date(now);yd.setDate(yd.getDate()-1);
-  return{today,yesterday:yd.toISOString().slice(0,10),mp,now,yd};
+  return{yesterday:yd.toISOString().slice(0,10),mp,now,yd};
 }
 
-function renderStats(pages,prefix,cardClass){
+function setStats(pages,prefix){
   const{yesterday,mp,now,yd}=getDates();
   let y=0,m=0;
   pages.forEach(p=>{const d=getDate(p);if(!d)return;const ds=d.slice(0,10);if(ds===yesterday)y++;if(ds.startsWith(mp))m++;});
@@ -208,30 +308,28 @@ function renderStats(pages,prefix,cardClass){
 }
 
 function dailyData(pages){
-  const counts={};
-  pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,10);counts[k]=(counts[k]||0)+1;});
+  const c={};pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,10);c[k]=(c[k]||0)+1;});
   const days=[];for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
-  return{labels:days.map(d=>{const[,m,day]=d.split('-');return parseInt(m)+'/'+parseInt(day);}),data:days.map(d=>counts[d]||0)};
+  return{labels:days.map(d=>{const[,m,day]=d.split('-');return parseInt(m)+'/'+parseInt(day);}),data:days.map(d=>c[d]||0)};
 }
 function monthlyBarData(pages){
-  const counts={};
-  pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);counts[k]=(counts[k]||0)+1;});
-  const keys=Object.keys(counts).sort();
-  return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),data:keys.map(k=>counts[k])};
+  const c={};pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);c[k]=(c[k]||0)+1;});
+  const keys=Object.keys(c).sort();
+  return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),data:keys.map(k=>c[k])};
 }
 function comboData(pages){
-  const md={};
-  pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);if(!md[k])md[k]={t:0,i:0};md[k].t++;if(isInterviewDone(p))md[k].i++;});
+  const md={};pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);if(!md[k])md[k]={t:0,i:0};md[k].t++;if(isInterviewDone(p))md[k].i++;});
   const keys=Object.keys(md).sort();
   return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),totals:keys.map(k=>md[k].t),rates:keys.map(k=>md[k].t>0?Math.round(md[k].i/md[k].t*1000)/10:0)};
 }
 
-function makeBar(canvasId,loadId,labels,data,col){
+function makeBar(id,loadId,labels,vals,col){
   document.getElementById(loadId).style.display='none';
-  document.getElementById(canvasId).style.display='block';
-  return new Chart(document.getElementById(canvasId).getContext('2d'),{
-    type:'bar',data:{labels,datasets:[{label:'応募数',data,
-      backgroundColor:data.map(v=>v>0&&v===Math.max(...data)?col.s:col.l),
+  document.getElementById(id).style.display='block';
+  if(charts[id]&&typeof charts[id].destroy==='function')charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
+    type:'bar',data:{labels,datasets:[{label:'応募数',data:vals,
+      backgroundColor:vals.map(v=>v>0&&v===Math.max(...vals)?col.s:col.l),
       borderColor:col.b,borderWidth:1.5,borderRadius:6,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1714',titleColor:'#f7f5f0',bodyColor:'#a09890',padding:10,callbacks:{label:c=>'  '+c.parsed.y+' 件'}}},
@@ -239,10 +337,11 @@ function makeBar(canvasId,loadId,labels,data,col){
         y:{grid:{color:'rgba(226,221,212,0.6)'},border:{display:false},ticks:{color:'#a09890',font:{size:11,family:'DM Mono'},stepSize:1},beginAtZero:true}}}
   });
 }
-function makeCombo(canvasId,loadId,labels,totals,rates,col){
+function makeCombo(id,loadId,labels,totals,rates,col){
   document.getElementById(loadId).style.display='none';
-  document.getElementById(canvasId).style.display='block';
-  return new Chart(document.getElementById(canvasId).getContext('2d'),{
+  document.getElementById(id).style.display='block';
+  if(charts[id]&&typeof charts[id].destroy==='function')charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
     data:{labels,datasets:[
       {type:'bar',label:'応募数',data:totals,backgroundColor:col.l,borderColor:col.b,borderWidth:1.5,borderRadius:6,yAxisID:'y'},
       {type:'line',label:'一次面談実施率',data:rates,borderColor:'rgba(34,139,90,0.9)',backgroundColor:'rgba(34,139,90,0.1)',borderWidth:2.5,pointBackgroundColor:'rgba(34,139,90,0.9)',pointRadius:5,tension:0.3,fill:true,yAxisID:'y2'}
@@ -258,63 +357,73 @@ function makeCombo(canvasId,loadId,labels,totals,rates,col){
   });
 }
 
-function destroyAll(){Object.keys(charts).forEach(k=>{if(charts[k]&&typeof charts[k].destroy==='function')charts[k].destroy();charts[k]=null;});}
-
-function renderCharts(pages){
-  destroyAll();
+function renderHire(hire){
+  const pages=data[hire];
   const all=pages.filter(hasStatus);
   const ob=pages.filter(p=>hasStatus(p)&&isOB(p));
+  const isShinso=hire==='shinso';
+  const p=isShinso?'s':'c';
+  const col=isShinso?{s:'rgba(200,82,42,0.85)',l:'rgba(200,82,42,0.2)',b:'rgba(200,82,42,0.5)'}:{s:'rgba(124,58,237,0.85)',l:'rgba(124,58,237,0.2)',b:'rgba(124,58,237,0.5)'};
+  const obCol={s:'rgba(79,126,247,0.85)',l:'rgba(79,126,247,0.2)',b:'rgba(79,126,247,0.5)'};
+
+  setStats(all,p+'a');
+  setStats(ob,p+'o');
 
   // 全媒体バー
-  if(currentSub==='daily'){const{labels,data}=dailyData(all);charts.allBar=makeBar('allBarChart','all-bar-loading',labels,data,{s:'rgba(200,82,42,0.85)',l:'rgba(200,82,42,0.2)',b:'rgba(200,82,42,0.5)'});}
-  else{const{labels,data}=monthlyBarData(all);charts.allBar=makeBar('allBarChart','all-bar-loading',labels,data,{s:'rgba(200,82,42,0.85)',l:'rgba(200,82,42,0.2)',b:'rgba(200,82,42,0.5)'});}
+  const mode=subMode[hire];
+  if(mode==='daily'){const{labels,data:d}=dailyData(all);makeBar(p+'aBarChart',p+'a-bar-loading',labels,d,col);}
+  else{const{labels,data:d}=monthlyBarData(all);makeBar(p+'aBarChart',p+'a-bar-loading',labels,d,col);}
   // 全媒体コンボ
   const{labels:ml,totals:mt,rates:mr}=comboData(all);
-  charts.allCombo=makeCombo('allComboChart','all-combo-loading',ml,mt,mr,{l:'rgba(200,82,42,0.25)',b:'rgba(200,82,42,0.6)'});
-  // OB日別
+  makeCombo(p+'aComboChart',p+'a-combo-loading',ml,mt,mr,col);
+  // OBバー
   const{labels:odl,data:odd}=dailyData(ob);
-  charts.obBar=makeBar('obBarChart','ob-bar-loading',odl,odd,{s:'rgba(79,126,247,0.85)',l:'rgba(79,126,247,0.2)',b:'rgba(79,126,247,0.5)'});
+  makeBar(p+'oBarChart',p+'o-bar-loading',odl,odd,obCol);
   // OBコンボ
   const{labels:oml,totals:omt,rates:omr}=comboData(ob);
-  charts.obCombo=makeCombo('obComboChart','ob-combo-loading',oml,omt,omr,{l:'rgba(79,126,247,0.25)',b:'rgba(79,126,247,0.6)'});
+  makeCombo(p+'oComboChart',p+'o-combo-loading',oml,omt,omr,obCol);
 }
 
-async function loadData(){
-  ['all-bar-loading','all-combo-loading','ob-bar-loading','ob-combo-loading'].forEach(id=>document.getElementById(id).style.display='flex');
-  ['allBarChart','allComboChart','obBarChart','obComboChart'].forEach(id=>document.getElementById(id).style.display='none');
-  document.getElementById('error-box').style.display='none';
+async function loadAll(){
   document.getElementById('last-updated').textContent='取得中...';
   try{
-    const pages=await fetchAllPages();
-    allData=pages;
-    renderStats(pages.filter(hasStatus),'all');
-    renderStats(pages.filter(p=>hasStatus(p)&&isOB(p)),'ob');
-    renderCharts(pages);
+    const[shinso,chuto]=await Promise.all([fetchPages('shinso'),fetchPages('chuto')]);
+    data.shinso=shinso;data.chuto=chuto;
+    renderHire('shinso');
+    renderHire('chuto');
     const now=new Date();
     document.getElementById('last-updated').textContent='更新：'+now.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   }catch(err){
-    ['all-bar-loading','all-combo-loading','ob-bar-loading','ob-combo-loading'].forEach(id=>document.getElementById(id).style.display='none');
     const eb=document.getElementById('error-box');eb.style.display='block';eb.textContent='❌ エラー: '+err.message;
     document.getElementById('last-updated').textContent='取得失敗';
   }
 }
 
-function switchMain(mode,btn){
-  currentMain=mode;
-  document.querySelectorAll('.main-tab').forEach(t=>{t.classList.remove('active-all','active-ob');});
-  btn.classList.add('active-'+mode);
+function switchHire(hire,btn){
+  currentHire=hire;
+  document.querySelectorAll('.hire-tab').forEach(t=>{t.classList.remove('active-shinso','active-chuto');});
+  btn.classList.add('active-'+hire);
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.getElementById('section-'+mode).classList.add('active');
+  document.getElementById('section-'+hire).classList.add('active');
 }
 
-function switchSub(mode,btn){
-  currentSub=mode;
-  document.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
+function switchMedia(hire,media,btn){
+  const parent=document.getElementById('section-'+hire);
+  parent.querySelectorAll('.media-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  if(allData.length>0)renderCharts(allData);
+  parent.querySelectorAll('.media-section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(hire+'-'+media).classList.add('active');
 }
 
-loadData();
+function switchSub(hire,btn,mode){
+  subMode[hire]=mode;
+  const parent=document.getElementById('section-'+hire);
+  parent.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  if(data[hire].length>0)renderHire(hire);
+}
+
+loadAll();
 </script>
 </body>
 </html>
