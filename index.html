@@ -262,8 +262,9 @@
 
 <script>
 const GAS='https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
-const INTERVIEW_DONE=['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
-const DATE_F='応募日',STATUS_F='ステータス',MEDIA_F='媒体',OB_VAL='offer box';
+const SHINSO_INTERVIEW_DONE=['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
+const CHUTO_INTERVIEW_DONE=['一次面接済み','一次面接NG','二次面接調整中','二次面接辞退','二次面接済','二次面接NG','三次面接調整中','三次面接辞退','三次面接済','三次面接NG','内定','入社'];
+const DATE_F='応募日',SHINSO_STATUS_F='ステータス',CHUTO_STATUS_F='ステータス（新）',MEDIA_F='媒体',OB_VAL='offer box';
 
 // 媒体キー→Notion上の値のマッピング
 const MEDIA_MAP={doda:'doda',wantedly:'Wantedly',green:'Green',ambi:'AMBI',circus:'サーカスエージェント'};
@@ -293,10 +294,11 @@ function getField(p,fn){
   if(f.type==='rich_text'&&f.rich_text?.[0])return f.rich_text[0].plain_text;
   return null;
 }
-function hasStatus(p){return getField(p,STATUS_F)!==null;}
+function hasStatus(p,sf){return getField(p,sf||SHINSO_STATUS_F)!==null;}
 function isOB(p){const m=getField(p,MEDIA_F);return m&&m.toLowerCase()===OB_VAL;}
+function isChutoInterviewDone(p){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}
 function isMedia(p,val){const m=getField(p,MEDIA_F);return m&&m===val;}
-function isInterviewDone(p){const s=getField(p,STATUS_F);return s&&INTERVIEW_DONE.includes(s);}
+function isInterviewDone(p,isChuto){if(isChuto){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}const s=getField(p,SHINSO_STATUS_F);return s&&SHINSO_INTERVIEW_DONE.includes(s);}
 
 function getDates(){
   const now=new Date(),today=now.toISOString().slice(0,10),mp=today.slice(0,7);
@@ -323,8 +325,8 @@ function monthlyData(pages){
   const keys=Object.keys(c).sort();
   return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),vals:keys.map(k=>c[k])};
 }
-function comboData(pages){
-  const md={};pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);if(!md[k])md[k]={t:0,i:0};md[k].t++;if(isInterviewDone(p))md[k].i++;});
+function comboData(pages,isChuto){
+  const md={};pages.forEach(p=>{const d=getDate(p);if(!d)return;const k=d.slice(0,7);if(!md[k])md[k]={t:0,i:0};md[k].t++;if(isInterviewDone(p,isChuto))md[k].i++;});
   const keys=Object.keys(md).sort();
   return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),totals:keys.map(k=>md[k].t),rates:keys.map(k=>md[k].t>0?Math.round(md[k].i/md[k].t*1000)/10:0)};
 }
@@ -364,30 +366,30 @@ function makeCombo(id,loadId,labels,totals,rates,accentColor){
   });
 }
 
-function renderSection(pages,statPrefix,barId,barLoadId,comboId,comboLoadId,accentColor,mode){
+function renderSection(pages,statPrefix,barId,barLoadId,comboId,comboLoadId,accentColor,mode,isChuto){
   setStats(pages,statPrefix);
   let labels,vals;
   if(mode==='daily'){const r=dailyData(pages);labels=r.labels;vals=r.vals;}
   else{const r=monthlyData(pages);labels=r.labels;vals=r.vals;}
   makeBar(barId,barLoadId,labels,vals,accentColor);
-  const{labels:cl,totals:ct,rates:cr}=comboData(pages);
+  const{labels:cl,totals:ct,rates:cr}=comboData(pages,isChuto);
   makeCombo(comboId,comboLoadId,cl,ct,cr,accentColor);
 }
 
 function renderAll(){
-  const s=shinsoData.filter(hasStatus);
-  const sob=shinsoData.filter(p=>hasStatus(p)&&isOB(p));
+  const s=shinsoData.filter(p=>hasStatus(p,SHINSO_STATUS_F));
+  const sob=shinsoData.filter(p=>hasStatus(p,SHINSO_STATUS_F)&&isOB(p));
   renderSection(s,'sa','saBar','sa-bar-l','saCombo','sa-combo-l','rgba(200,82,42,0.7)',barMode.shinso);
   renderSection(sob,'so','soBar','so-bar-l','soCombo','so-combo-l','rgba(79,126,247,0.7)',barMode.shinso);
 
-  const ca=chutoData.filter(hasStatus);
-  renderSection(ca,'ca','caBar','ca-bar-l','caCombo','ca-combo-l',MEDIA_ACCENT.all,barMode.chuto);
+  const ca=chutoData.filter(p=>hasStatus(p,CHUTO_STATUS_F));
+  renderSection(ca,'ca','caBar','ca-bar-l','caCombo','ca-combo-l',MEDIA_ACCENT.all,barMode.chuto,true);
 
   Object.entries(MEDIA_MAP).forEach(([key,notionVal])=>{
-    const filtered=chutoData.filter(p=>hasStatus(p)&&isMedia(p,notionVal));
+    const filtered=chutoData.filter(p=>hasStatus(p,CHUTO_STATUS_F)&&isMedia(p,notionVal));
     const pfxMap={doda:'cd',wantedly:'cw',green:'cg',ambi:'cambi',circus:'cc'};
     const pfx=pfxMap[key];
-    renderSection(filtered,pfx,pfx+'Bar',pfx+'-bar-l',pfx+'Combo',pfx+'-combo-l',MEDIA_ACCENT[key],barMode[key]);
+    renderSection(filtered,pfx,pfx+'Bar',pfx+'-bar-l',pfx+'Combo',pfx+'-combo-l',MEDIA_ACCENT[key],barMode[key],true);
   });
 }
 
