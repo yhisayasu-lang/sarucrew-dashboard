@@ -263,7 +263,7 @@
 <script>
 const GAS='https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
 const SHINSO_INTERVIEW_DONE=['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
-const CHUTO_INTERVIEW_DONE=['一次面接済み','一次面接NG','二次面接調整中','二次面接辞退','二次面接済','二次面接NG','三次面接調整中','三次面接辞退','三次面接済','三次面接NG','内定','入社'];
+const CHUTO_INTERVIEW_DONE=['一次面接済','一次面接NG','一次面接辞退','二次面接調整中','二次面接NG','二次面接辞退','三次面接調整中','三次面接NG','三次面接辞退','内定','内定辞退','入社'];
 const DATE_F='応募日',SHINSO_STATUS_F='ステータス',CHUTO_STATUS_F='ステータス(新)',MEDIA_F='媒体',OB_VAL='offer box';
 
 // 媒体キー→Notion上の値のマッピング
@@ -297,7 +297,7 @@ function getField(p,fn){
 function hasStatus(p,sf){return getField(p,sf||SHINSO_STATUS_F)!==null;}
 function isOB(p){const m=getField(p,MEDIA_F);return m&&m.toLowerCase()===OB_VAL;}
 function isChutoInterviewDone(p){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}
-function isMedia(p,val){const m=getField(p,MEDIA_F);return m&&m===val;}
+function isMedia(p,val){const f=p.properties[MEDIA_F];if(!f)return false;if(f.type==='multi_select')return f.multi_select.some(x=>x.name===val);const m=getField(p,MEDIA_F);return m&&m===val;}
 function isInterviewDone(p,isChuto){if(isChuto){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}const s=getField(p,SHINSO_STATUS_F);return s&&SHINSO_INTERVIEW_DONE.includes(s);}
 
 function getDates(){
@@ -382,11 +382,11 @@ function renderAll(){
   renderSection(s,'sa','saBar','sa-bar-l','saCombo','sa-combo-l','rgba(200,82,42,0.7)',barMode.shinso);
   renderSection(sob,'so','soBar','so-bar-l','soCombo','so-combo-l','rgba(79,126,247,0.7)',barMode.shinso);
 
-  const ca=chutoData.filter(p=>hasStatus(p,CHUTO_STATUS_F));
+  const ca=chutoData;
   renderSection(ca,'ca','caBar','ca-bar-l','caCombo','ca-combo-l',MEDIA_ACCENT.all,barMode.chuto,true);
 
   Object.entries(MEDIA_MAP).forEach(([key,notionVal])=>{
-    const filtered=chutoData.filter(p=>hasStatus(p,CHUTO_STATUS_F)&&isMedia(p,notionVal));
+    const filtered=chutoData.filter(p=>isMedia(p,notionVal));
     const pfxMap={doda:'cd',wantedly:'cw',green:'cg',ambi:'cambi',circus:'cc'};
     const pfx=pfxMap[key];
     renderSection(filtered,pfx,pfx+'Bar',pfx+'-bar-l',pfx+'Combo',pfx+'-combo-l',MEDIA_ACCENT[key],barMode[key],true);
