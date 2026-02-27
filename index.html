@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>採用ダッシュボード | SARUCREW</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
   :root{--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#e2ddd4;--accent:#c8522a;--accent-ob:#4f7ef7;--accent-chuto:#7c3aed;--text:#1a1714;--text-muted:#7a7167;--text-dim:#a09890;}
@@ -260,20 +259,53 @@
   </div>
 </div>
 
+<!-- Chart.js をbody末尾に移動: DOM先行レンダリングでFCP改善 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const GAS='https://script.google.com/macros/s/AKfycbwt0uV5yH5uOv6HGngANmOexMHB0Ta0f5LnYt0KiDbzIT9dNGGhUL3Iw2YKAZXIW9Sp/exec';
 const SHINSO_INTERVIEW_DONE=['2回目面談調整中','2回目面談済み','一次面接調整中','一次面接NG','二次面接調整中','二次面接NG','三次面接調整中','内定'];
 const CHUTO_INTERVIEW_DONE=['一次面接済','一次面接NG','一次面接辞退','二次面接調整中','二次面接NG','二次面接辞退','三次面接調整中','三次面接NG','三次面接辞退','内定','内定辞退','入社'];
 const DATE_F='応募日',SHINSO_STATUS_F='ステータス',CHUTO_STATUS_F='ステータス(新)',MEDIA_F='媒体',OB_VAL='offer box';
 
-// 媒体キー→Notion上の値のマッピング
 const MEDIA_MAP={doda:'doda',wantedly:'Wantedly',green:'Green',ambi:'AMBI',circus:'サーカスエージェント'};
 const MEDIA_ACCENT={doda:'rgba(37,99,235,0.7)',wantedly:'rgba(16,185,129,0.7)',green:'rgba(5,150,105,0.7)',ambi:'rgba(245,158,11,0.7)',circus:'rgba(239,68,68,0.7)',all:'rgba(124,58,237,0.7)'};
+const PFX_MAP={doda:'cd',wantedly:'cw',green:'cg',ambi:'cambi',circus:'cc'};
+const ALL_KEYS=['shinso','ob','chuto','doda','wantedly','green','ambi','circus'];
 
+// ── キャッシュ (stale-while-revalidate, TTL 5分) ──────────────────────────
+const CACHE_KEY='sarucrew_cache_v1';
+const CACHE_TTL=5*60*1000;
+function saveCache(s,c){try{localStorage.setItem(CACHE_KEY,JSON.stringify({s,c,ts:Date.now()}));}catch(e){}}
+function loadCached(){
+  try{
+    const raw=localStorage.getItem(CACHE_KEY);
+    if(!raw)return null;
+    const d=JSON.parse(raw);
+    if(Date.now()-d.ts>CACHE_TTL)return null;
+    return d;
+  }catch(e){return null;}
+}
+
+// ── 状態 ──────────────────────────────────────────────────────────────────
 let shinsoData=[],chutoData=[];
 let barMode={shinso:'daily',chuto:'daily',doda:'daily',wantedly:'daily',green:'daily',ambi:'daily',circus:'daily'};
 let charts={};
 
+// セクション描画バージョン管理（未描画 or データ更新時のみ再描画）
+let dataVersion=0;
+const sectionVersion={};
+
+// アクティブタブ追跡
+let currentHire='shinso';
+let currentShinsoMedia='all';
+let currentChutoMedia='all';
+
+function getVisibleKey(){
+  if(currentHire==='shinso')return currentShinsoMedia==='ob'?'ob':'shinso';
+  return currentChutoMedia==='all'?'chuto':currentChutoMedia;
+}
+
+// ── データ取得 ──────────────────────────────────────────────────────────────
 async function fetchPages(type){
   const res=await fetch(GAS+'?type='+type);
   if(!res.ok)throw new Error('取得エラー('+type+'): '+res.status);
@@ -281,6 +313,8 @@ async function fetchPages(type){
   if(!Array.isArray(d))throw new Error('データ形式エラー');
   return d;
 }
+
+// ── ユーティリティ ──────────────────────────────────────────────────────────
 function getDate(p){
   const f=p.properties[DATE_F];
   if(f){if(f.type==='date'&&f.date)return f.date.start;if(f.type==='rich_text'&&f.rich_text?.[0])return f.rich_text[0].plain_text;if(f.type==='created_time')return f.created_time;}
@@ -296,7 +330,6 @@ function getField(p,fn){
 }
 function hasStatus(p,sf){return getField(p,sf||SHINSO_STATUS_F)!==null;}
 function isOB(p){const m=getField(p,MEDIA_F);return m&&m.toLowerCase()===OB_VAL;}
-function isChutoInterviewDone(p){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}
 function isMedia(p,val){const f=p.properties[MEDIA_F];if(!f)return false;if(f.type==='multi_select')return f.multi_select.some(x=>x.name===val);const m=getField(p,MEDIA_F);return m&&m===val;}
 function isInterviewDone(p,isChuto){if(isChuto){const s=getField(p,CHUTO_STATUS_F);return s&&CHUTO_INTERVIEW_DONE.includes(s);}const s=getField(p,SHINSO_STATUS_F);return s&&SHINSO_INTERVIEW_DONE.includes(s);}
 
@@ -331,6 +364,7 @@ function comboData(pages,isChuto){
   return{labels:keys.map(k=>{const[y,m]=k.split('-');return y+'/'+parseInt(m);}),totals:keys.map(k=>md[k].t),rates:keys.map(k=>md[k].t>0?Math.round(md[k].i/md[k].t*1000)/10:0)};
 }
 
+// ── チャート描画 ────────────────────────────────────────────────────────────
 function makeBar(id,loadId,labels,vals,accentColor){
   document.getElementById(loadId).style.display='none';
   document.getElementById(id).style.display='block';
@@ -376,29 +410,57 @@ function renderSection(pages,statPrefix,barId,barLoadId,comboId,comboLoadId,acce
   makeCombo(comboId,comboLoadId,cl,ct,cr,accentColor);
 }
 
-function renderAll(){
+// ── Lazy rendering ──────────────────────────────────────────────────────────
+// セクションキーに対応するデータ描画（未描画 or データ更新時のみ実行）
+function renderByKey(key){
+  if(sectionVersion[key]===dataVersion)return;
   const s=shinsoData.filter(p=>hasStatus(p,SHINSO_STATUS_F));
-  const sob=shinsoData.filter(p=>hasStatus(p,SHINSO_STATUS_F)&&isOB(p));
-  renderSection(s,'sa','saBar','sa-bar-l','saCombo','sa-combo-l','rgba(200,82,42,0.7)',barMode.shinso);
-  renderSection(sob,'so','soBar','so-bar-l','soCombo','so-combo-l','rgba(79,126,247,0.7)',barMode.shinso);
-
-  const ca=chutoData;
-  renderSection(ca,'ca','caBar','ca-bar-l','caCombo','ca-combo-l',MEDIA_ACCENT.all,barMode.chuto,true);
-
-  Object.entries(MEDIA_MAP).forEach(([key,notionVal])=>{
-    const filtered=chutoData.filter(p=>isMedia(p,notionVal));
-    const pfxMap={doda:'cd',wantedly:'cw',green:'cg',ambi:'cambi',circus:'cc'};
-    const pfx=pfxMap[key];
+  if(key==='shinso'){
+    renderSection(s,'sa','saBar','sa-bar-l','saCombo','sa-combo-l','rgba(200,82,42,0.7)',barMode.shinso);
+  }else if(key==='ob'){
+    renderSection(s.filter(p=>isOB(p)),'so','soBar','so-bar-l','soCombo','so-combo-l','rgba(79,126,247,0.7)',barMode.shinso);
+  }else if(key==='chuto'){
+    renderSection(chutoData,'ca','caBar','ca-bar-l','caCombo','ca-combo-l',MEDIA_ACCENT.all,barMode.chuto,true);
+  }else if(MEDIA_MAP[key]){
+    const filtered=chutoData.filter(p=>isMedia(p,MEDIA_MAP[key]));
+    const pfx=PFX_MAP[key];
     renderSection(filtered,pfx,pfx+'Bar',pfx+'-bar-l',pfx+'Combo',pfx+'-combo-l',MEDIA_ACCENT[key],barMode[key],true);
-  });
+  }
+  sectionVersion[key]=dataVersion;
 }
 
+// 現在表示中のセクションのみ描画
+function renderVisible(){renderByKey(getVisibleKey());}
+
+// 表示中セクションを優先描画し、残りをアイドル時間に非同期描画
+function renderAllDeferred(){
+  renderVisible();
+  const visible=getVisibleKey();
+  const rest=ALL_KEYS.filter(k=>k!==visible);
+  if(typeof requestIdleCallback!=='undefined'){
+    let i=0;
+    function step(dl){
+      while(i<rest.length&&dl.timeRemaining()>5)renderByKey(rest[i++]);
+      if(i<rest.length)requestIdleCallback(step);
+    }
+    requestIdleCallback(step);
+  }else{
+    setTimeout(()=>rest.forEach(k=>renderByKey(k)),500);
+  }
+}
+
+// ── データ読み込み ──────────────────────────────────────────────────────────
 async function loadAll(){
   document.getElementById('last-updated').textContent='取得中...';
   try{
+    // 新卒・中途を並列取得（元から並列だが明示）
     const[s,c]=await Promise.all([fetchPages('shinso'),fetchPages('chuto')]);
     shinsoData=s;chutoData=c;
-    renderAll();
+    // データ更新 → 全セクションを再描画対象に
+    dataVersion++;
+    ALL_KEYS.forEach(k=>delete sectionVersion[k]);
+    saveCache(s,c);
+    renderAllDeferred();
     const now=new Date();
     document.getElementById('last-updated').textContent='更新：'+now.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   }catch(err){
@@ -407,33 +469,59 @@ async function loadAll(){
   }
 }
 
+// ── タブ切替 ────────────────────────────────────────────────────────────────
 function switchHire(hire,btn){
   document.querySelectorAll('.hire-tab').forEach(t=>{t.classList.remove('active-shinso','active-chuto');});
   btn.classList.add('active-'+hire);
   document.querySelectorAll('.hire-section').forEach(s=>s.classList.remove('active'));
   document.getElementById('hire-'+hire).classList.add('active');
+  currentHire=hire;
+  if(shinsoData.length||chutoData.length)renderVisible();
 }
 function switchShinsoTab(tab,btn){
   document.querySelectorAll('#hire-shinso .media-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('#hire-shinso .sub-section').forEach(s=>s.classList.remove('active'));
   document.getElementById('shinso-'+tab).classList.add('active');
+  currentShinsoMedia=tab;
+  if(shinsoData.length||chutoData.length)renderVisible();
 }
 function switchChutoTab(tab,btn){
   document.querySelectorAll('#hire-chuto .chuto-media-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('#hire-chuto .sub-section').forEach(s=>s.classList.remove('active'));
   document.getElementById('chuto-'+tab).classList.add('active');
+  currentChutoMedia=tab;
+  if(shinsoData.length||chutoData.length)renderVisible();
 }
 function switchBarMode(key,btn,mode){
   barMode[key]=mode;
   const parent=btn.closest('.sub-section')||btn.closest('.hire-section');
   parent.querySelectorAll('.sub-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  if(shinsoData.length||chutoData.length)renderAll();
+  // 影響セクションのキャッシュを無効化（shinsoはob共通）
+  if(key==='shinso'){delete sectionVersion['shinso'];delete sectionVersion['ob'];}
+  else{delete sectionVersion[key];}
+  if(shinsoData.length||chutoData.length)renderVisible();
 }
 
-loadAll();
+// ── 起動 (stale-while-revalidate) ──────────────────────────────────────────
+(function init(){
+  const cached=loadCached();
+  if(cached){
+    // キャッシュがあれば即座に表示
+    shinsoData=cached.s;chutoData=cached.c;
+    dataVersion++;
+    renderVisible();
+    const ts=new Date(cached.ts);
+    document.getElementById('last-updated').textContent=
+      'キャッシュ表示中（'+ts.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+'）— 更新中...';
+    // バックグラウンドで最新データを取得
+    loadAll();
+  }else{
+    loadAll();
+  }
+})();
 </script>
 </body>
 </html>
